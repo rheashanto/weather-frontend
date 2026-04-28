@@ -83,6 +83,7 @@
   </div>
 </nav>
 
+<!-- AUTH PAGE -->
 <div id="page-auth" class="page">
   <div class="auth-card">
     <div class="auth-tabs">
@@ -105,6 +106,7 @@
   </div>
 </div>
 
+<!-- MAIN PAGE -->
 <div id="page-main" class="page">
   <div class="search-bar">
     <input type="text" id="city-input" placeholder="Search city (e.g. London, Tokyo, Amsterdam...)" onkeydown="if(event.key==='Enter')searchWeather()" />
@@ -137,14 +139,12 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  // ↓ Replace this with your ngrok URL
-  const API = 'https://idalia-preornamental-oscar.ngrok-free.app/api';
+  const API = 'https://idalia-preornamental-oscar.ngrok-free.dev/api';
 
-  // These headers bypass ngrok's browser warning page
-  const BASE_HEADERS = {
-    'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true',
-  };
+  // Adds the ngrok browser-warning bypass header to every request
+  function headers(extra = {}) {
+    return { 'ngrok-skip-browser-warning': 'true', ...extra };
+  }
 
   let token = localStorage.getItem('wv_token');
   let username = localStorage.getItem('wv_username');
@@ -181,11 +181,7 @@
     const errEl = document.getElementById('login-error');
     errEl.style.display = 'none';
     try {
-      const res = await fetch(`${API}/auth/login`, {
-        method: 'POST',
-        headers: BASE_HEADERS,
-        body: JSON.stringify({email, password})
-      });
+      const res = await fetch(`${API}/auth/login`, { method: 'POST', headers: headers({'Content-Type':'application/json'}), body: JSON.stringify({email, password}) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Login failed');
       storeAuth(data.access_token, data.username);
@@ -200,11 +196,7 @@
     const errEl = document.getElementById('signup-error');
     errEl.style.display = 'none';
     try {
-      const res = await fetch(`${API}/auth/signup`, {
-        method: 'POST',
-        headers: BASE_HEADERS,
-        body: JSON.stringify({username, email, password})
-      });
+      const res = await fetch(`${API}/auth/signup`, { method: 'POST', headers: headers({'Content-Type':'application/json'}), body: JSON.stringify({username, email, password}) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Signup failed');
       storeAuth(data.access_token, data.username);
@@ -230,9 +222,7 @@
     if (!city) return;
     document.getElementById('weather-card').classList.remove('visible');
     try {
-      const res = await fetch(`${API}/weather/current?city=${encodeURIComponent(city)}`, {
-        headers: { ...BASE_HEADERS, Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch(`${API}/weather/current?city=${encodeURIComponent(city)}`, { headers: headers({Authorization: `Bearer ${token}`}) });
       if (res.status === 401) { logout(); return; }
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'City not found');
@@ -254,11 +244,7 @@
     const btn = document.getElementById('btn-save');
     btn.disabled = true; btn.textContent = 'Saving...';
     try {
-      const res = await fetch(`${API}/weather/save`, {
-        method: 'POST',
-        headers: { ...BASE_HEADERS, Authorization: `Bearer ${token}` },
-        body: JSON.stringify(currentWeather)
-      });
+      const res = await fetch(`${API}/weather/save`, { method: 'POST', headers: headers({Authorization: `Bearer ${token}`, 'Content-Type':'application/json'}), body: JSON.stringify(currentWeather) });
       if (res.status === 401) { logout(); return; }
       if (!res.ok) throw new Error('Failed to save');
       showToast('Weather saved! ✅', 'success');
@@ -271,9 +257,7 @@
     const list = document.getElementById('saved-list');
     list.innerHTML = '<div class="empty-state"><span class="spinner"></span></div>';
     try {
-      const res = await fetch(`${API}/weather/saved`, {
-        headers: { ...BASE_HEADERS, Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch(`${API}/weather/saved`, { headers: headers({Authorization: `Bearer ${token}`}) });
       if (res.status === 401) { logout(); return; }
       const data = await res.json();
       if (!data.length) { list.innerHTML = '<div class="empty-state">No saved weather yet. Search a city and hit Save! 🌍</div>'; return; }
@@ -293,10 +277,7 @@
 
   async function deleteEntry(id) {
     try {
-      const res = await fetch(`${API}/weather/saved/${id}`, {
-        method: 'DELETE',
-        headers: { ...BASE_HEADERS, Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch(`${API}/weather/saved/${id}`, { method: 'DELETE', headers: headers({Authorization: `Bearer ${token}`}) });
       if (res.status === 401) { logout(); return; }
       if (!res.ok) throw new Error('Failed to delete');
       document.getElementById(`entry-${id}`)?.remove();
